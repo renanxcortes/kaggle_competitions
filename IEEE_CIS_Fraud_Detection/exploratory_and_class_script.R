@@ -73,15 +73,24 @@ train_transaction %>%
   ggplot(aes(x = isFraud)) +
   geom_bar()
 
-# Base model ----
+# Create Data Partitions ----
 
-base_logistic <- glm(isFraud ~ ., data = train_transaction, family=binomial(link='logit'))
+trainIndex <- createDataPartition(train_transaction$isFraud, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
 
-p <- predict(base_logistic, train_transaction, type = "response")
+validation_train_transaction <- train_transaction[trainIndex,]
+validation_test_transaction <- train_transaction[-trainIndex,]
+
+# Baseline model ----
+
+base_logistic <- glm(isFraud ~ ., data = validation_train_transaction, family=binomial(link='logit'))
+
+p <- predict(base_logistic, validation_test_transaction, type = "response")
 
 # Check AUC and plot ROC curve
 PRROC_obj <- roc.curve(scores.class0 = p, 
-                       weights.class0 = train_transaction$isFraud,
+                       weights.class0 = validation_test_transaction$isFraud,
                        curve = TRUE)
 plot(PRROC_obj)
 auc <- PRROC_obj$auc
@@ -90,20 +99,8 @@ auc <- PRROC_obj$auc
 #library(caTools)
 #auc <- colAUC(p, train_transaction$isFraud) # plotROC = TRUE
 
-# Assessing local validation of many models with Cross-Validation
-trainIndex <- createDataPartition(train_transaction$isFraud, p = .8, 
-                                  list = FALSE, 
-                                  times = 1)
-head(trainIndex)
 
 
 
 
 
-
-
-
-PRROC_obj <- roc.curve(scores.class0 = p, 
-                       weights.class0 = train_transaction$isFraud,
-                       curve = TRUE)
-plot(PRROC_obj)
